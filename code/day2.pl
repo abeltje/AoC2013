@@ -27,12 +27,34 @@ if ($part == 1) {
         for my $go (@goes) {
             my @parts = split(/,\s*/, $go);
             for my $prt (@parts) {
-                my ($n, $c) = $prt =~ m{([0-9]+) ($colours)(?:, )?};
+                my ($n, $c) = $prt =~ m{([0-9]+) ($colours)};
                 $ok &&= $n <= $max_cubes{$c};
             }
         }
         say "$id: $line" if $ok;
         $total += $id if $ok;
+    }
+    close($in);
+    say "Total: $total";
+}
+else {
+    my $colours = join("|", qw<blue red green>);
+    my $total = 0;
+    open(my $in, '<', $input) or die "Cannot open($input): $!";
+    while (my $line = <$in>) {
+        my %min_cubes = (red => 0, green => 0, blue => 0);
+        chomp($line);
+        $line =~ s{^Game ([0-9]+):\s+}{};
+        my @goes = split(/;\s*/, $line);
+        for my $go (@goes) {
+            my @parts = split(/,\s*/, $go);
+            for my $prt (@parts) {
+                my ($n, $c) = $prt =~ m{([0-9]+) ($colours)};
+                $min_cubes{$c} = $n if $min_cubes{$c} < $n;
+            }
+        }
+        my $power = $min_cubes{red} * $min_cubes{green} * $min_cubes{blue};
+        $total += $power;
     }
     close($in);
     say "Total: $total";
