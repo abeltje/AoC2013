@@ -36,4 +36,36 @@ say "$keys - $left @{[ $pow ? (2 ** ($pow - 1)) : 0 ]}";
     say "Total: $total";
 }
 else {
+    my $total = 0;
+    my %copy;
+    open(my $in, '<', $input) or die "Cannot open($input): $!";
+    while (my $line = <$in>) {
+        chomp($line);
+        $line =~ s{^Card\s+([0-9]+):\s+}{};
+        my $cardnr = $1;
+        my ($winning, $have) = split(/\s+\|\s+/, $line);
+        my %wins = map { ($_ => undef) } split(" ", $winning);
+        my @havs = split(" ", $have);
+        my $keys = scalar(keys(%wins));
+        exists($wins{$_}) and delete($wins{$_}) for @havs;
+        my $copies = $keys - keys(%wins);
+say "$cardnr: $copies";
+        for my $coffs (1 .. $copies) {
+            $copy{ $cardnr + $coffs }++;
+        }
+        if (exists($copy{$cardnr})) {
+            for my $n (1 .. $copy{$cardnr}) {
+                for my $coffs (1 .. $copies) {
+                    $copy{ $cardnr + $coffs }++;
+                }
+            }
+        }
+
+        $total += 1;
+    }
+    close($in);
+    for my $cardnr (keys(%copy)) {
+        $total += $copy{$cardnr};
+    }
+    say "Total: $total";
 }
