@@ -62,10 +62,10 @@ else {
         $same = find_same(\@all_platforms, \@platform);
         say "Same $n => @$same" if @$same;
         $n++;
-    # if we have 2 recuring patterns we know offset and number of patterns
-    } until @$same == 2;
+    } until @$same == 1;
+    $n--;
     my $offset = $same->[0];
-    my $modulo = $same->[1] - $same->[0];
+    my $modulo = $n - $same->[0];
     my $state = $offset + (($cycles - $offset) % $modulo);
     say "Using state $state";
     @platform = @{ $all_platforms[ $state ] };
