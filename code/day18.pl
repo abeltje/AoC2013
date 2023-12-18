@@ -88,7 +88,7 @@ sub make_aoa ($grid) {
 }
 
 sub dig_interior ($trenches) {
-    # mark "outside" with "O"
+    # mark "outside" squares with "O"
     my @new = map { [ @$_ ] } @$trenches;
     for my $y (0 .. $#new) {
         my $rstr = join("", @{$new[$y]});
