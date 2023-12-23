@@ -5,8 +5,9 @@ use DDP;
 use File::Basename;
 use Getopt::Long qw< :config pass_through >;
 GetOptions(
-    'prd'      => \my $prd,
-    'part|p:1' => \my $part,
+    'prd'        => \my $prd,
+    'part|p:1'   => \my $part,
+    'expand|e=i' => \my $opt_expand,
 );
 $part //= 1;
 my ($day) = basename($0) =~ m/([0-9]+)/;
@@ -35,6 +36,7 @@ say "@$_" for @$espace;
             }
         }
     }
+say "$_ => @{$galaxies{$_}}" for sort {$a <=> $b} keys(%galaxies);
     say "Identified @{[ 0+keys(%galaxies) ]} galaxies";
     my %distance;
     for my $source (sort keys %galaxies) {
@@ -46,6 +48,47 @@ say "@$_" for @$espace;
                 abs($galaxies{$dest}->[1] - $galaxies{$source}->[1])) // 0;
 #say "Calc $key ($source [$galaxies{$source}[0], $galaxies{$source}[1]] ".
 #    "to $dest [$galaxies{$dest}[0], $galaxies{$dest}[1]]) $distance{$key}";
+        }
+    }
+    say "Aantal afstanden: ", scalar(keys(%distance));
+    my $total = 0;
+    $total += $distance{$_} for keys(%distance);
+    say "Total: $total";
+}
+else {
+    my @space;
+    open(my $in, '<', $input) or die "Cannot open($input): $!";
+    while (my $line = <$in>) {
+        chomp($line);
+        push(@space, [ split(/|/, $line) ]);
+    }
+    close($in);
+    name_galaxies(\@space);
+    my %galaxies;
+    for my $y (0 .. $#space) {
+        for my $x (0 .. $#{$space[$y]}) {
+            if ($space[$y][$x] =~ m{^ ([0-9]+) $}x) {
+                $galaxies{$1} = [$x, $y];
+            }
+        }
+    }
+
+    # replace a single one with $opt_exand => that is ($opt_expand - 1) more.
+    # exception for $opt_expand == 1; that means add 1 extra.
+    my $expand = ($opt_expand // 1) == 1 ? 1 : $opt_expand - 1;
+
+    really_expand_universe(\@space, \%galaxies, $expand);
+#say "$_ => @{$galaxies{$_}}" for sort {$a <=> $b} keys(%galaxies);
+
+    say "Identified @{[ 0+keys(%galaxies) ]} galaxies";
+    my %distance;
+    for my $source (sort keys %galaxies) {
+        for my $dest (sort keys %galaxies) {
+            next if $source eq $dest;
+            my $key = join(";", sort {$a <=> $b} ($source, $dest));
+            next if exists($distance{ $key });
+            $distance{ $key } = (abs($galaxies{$dest}->[0] - $galaxies{$source}->[0]) +
+                abs($galaxies{$dest}->[1] - $galaxies{$source}->[1])) // 0;
         }
     }
     say "Aantal afstanden: ", scalar(keys(%distance));
@@ -90,6 +133,35 @@ sub name_galaxies ($space) {
     for my $row (@$space) {
         for my $col (@$row) {
             $col =~ s{#}{$name} and $name++;
+        }
+    }
+}
+
+sub really_expand_universe($space, $galaxies, $expand) {
+    my %lookup_galaxy = map { (join(";", @{$galaxies->{$_}}) => $_) } keys(%$galaxies);
+
+    for my $y (0 .. $#{$space}) {
+        my $row = $space->[$y];
+        if (! grep { m{^ [0-9]+ $}x } @$row) {
+            my @keys = map { $lookup_galaxy{$_} } grep {
+                my ($yy) = $_ =~ m{^ [0-9]+ ; ([0-9]+) $}x;
+                $yy > $y;
+            } keys(%lookup_galaxy);
+            for my $galaxy (@keys) {
+                $galaxies->{$galaxy}[1] += $expand;
+            }
+        }
+    }
+    for (my $x = $#{$space->[0]}; $x > 0; $x--) {
+        my @column = map { $_->[$x] } @$space;
+        if (! grep { m{^ [0-9]+ $}x } @column) {
+            my @keys = map { $lookup_galaxy{$_} } grep {
+                my ($xx) = $_ =~ m{^ ([0-9]+) ; [0-9]+ $}x;
+                $xx > $x;
+            } keys(%lookup_galaxy);
+            for my $galaxy (@keys) {
+                $galaxies->{$galaxy}[0] += $expand;
+            }
         }
     }
 }
